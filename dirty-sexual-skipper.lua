@@ -1,23 +1,23 @@
 --[[
--- Install script to ~/.local/share/vlc/lua/extensions/credit-skipper.lua
--- Profiles saved to: ~/.config/vlc/credit-skipper.conf
+-- Install script to ~/.local/share/vlc/lua/extensions/dirty-sexual-skipper.lua
+-- Profiles saved to: ~/.config/vlc/dirty-sexual-skipper.conf
 ]]
 
 function descriptor()
     return {
-        title = "Credit Skipper",
+        title = "Dirty Sexual Skipper",
         version = "1.0.0",
-        author = "Michael Bull",
-        url = "https://github.com/michaelbull/vlc-credit-skipper",
-        shortdesc = "Skip Intro/Outro Credits",
-        description = "Automatically skip intro/outro credit sequences in VLC.",
+        author = "Mohamed Okasha",
+        url = "https://github.com/mohamed-okasha/dirty-sexual-skipper.git",
+        shortdesc = "Dirty Sexual Skipper",
+        description = "Dirty Sexual Skipper",
         capabilities = {}
     }
 end
 
 function activate()
     profiles = {}
-    config_file = vlc.config.configdir() .. "/credit-skipper.conf"
+    config_file = vlc.config.configdir() .. "/ds-skipper.conf"
 
     if (file_exists(config_file)) then
         load_all_profiles()
@@ -40,7 +40,7 @@ end
 function open_dialog()
     dialog = vlc.dialog(descriptor().title)
 
-    dialog:add_label("<center><h3>Profile</h3></center>", 1, 1, 2, 1)
+    dialog:add_label("<center><h3>Movie Profile</h3></center>", 1, 1, 2, 1)
     dialog:add_button("Load", populate_profile_fields, 1, 3, 1, 1)
     dialog:add_button("Delete", delete_profile, 2, 3, 1, 1)
 
@@ -51,11 +51,8 @@ function open_dialog()
     dialog:add_label("Profile name:", 1, 6, 1, 1)
     profile_name_input = dialog:add_text_input("", 2, 6, 1, 1)
 
-    dialog:add_label("Intro duration (s):", 1, 7, 1, 1)
-    start_time_input = dialog:add_text_input("", 2, 7, 1, 1)
-
-    dialog:add_label("Outro duration (s):", 1, 8, 1, 1)
-    finish_time_input = dialog:add_text_input("", 2, 8, 1, 1)
+    dialog:add_label("time clips from,to .. (s):", 1, 7, 1, 1)
+    time_clips_input = dialog:add_text_input("", 2, 7, 1, 1)
 
     dialog:add_button("Save", save_profile, 1, 9, 2, 1)
 
@@ -80,8 +77,7 @@ function populate_profile_fields()
 
     if profile then
         profile_name_input:set_text(profile.name)
-        start_time_input:set_text(profile.start_time)
-        finish_time_input:set_text(profile.finish_time)
+        time_clips_input:set_text(profile.time_clips)
     end
 end
 
@@ -96,15 +92,13 @@ end
 
 function save_profile()
     if profile_name_input:get_text() == "" then return end
-    if start_time_input:get_text() == "" then start_time_input:set_text("0") end
-    if finish_time_input:get_text() == "" then finish_time_input:set_text("0") end
+    if start_time_input.get_text() == "" then start_time_input.set_text("0") end
 
     local updated_existing = false
 
     for _, profile in pairs(profiles) do
         if profile.name == profile_name_input:get_text() then
-            profile.start_time = tonumber(start_time_input:get_text())
-            profile.finish_time = tonumber(finish_time_input:get_text())
+            profile.time_clips = time_clips_input:get_text()
             updated_existing = true
         end
     end
@@ -112,8 +106,7 @@ function save_profile()
     if not updated_existing then
         table.insert(profiles, {
             name = profile_name_input:get_text(),
-            start_time = tonumber(start_time_input:get_text()),
-            finish_time = tonumber(finish_time_input:get_text())
+            time_clips = time_clips_input:get_text()
         })
     end
 
@@ -121,8 +114,7 @@ function save_profile()
 end
 
 function start_playlist()
-    if start_time_input:get_text() == "" then return end
-    if finish_time_input:get_text() == "" then return end
+    if time_clips_input:get_text() == "" then return end
 
     local playlist = vlc.playlist.get("playlist", false)
     local children = {}
@@ -138,20 +130,29 @@ function start_playlist()
 
     vlc.playlist.clear()
 
-    local skip_start = tonumber(start_time_input:get_text())
-    local skip_finish = tonumber(finish_time_input:get_text())
+    local time_clips = time_clips_input:get_text()
+    -- proof of concept
+
     for _, child in pairs(children) do
         local options = {}
 
-        if (child.duration - skip_start - skip_finish) > 0 then
-            if skip_start > 0 then
-                table.insert(options, "start-time=" .. skip_start)
-            end
+        table.insert(options, "start-time=" .. 0)
+        table.insert(options, "stop-time=" .. 15)
 
-            if skip_finish > 0 then
-                table.insert(options, "stop-time=" .. (child.duration - skip_finish))
-            end
-        end
+
+        vlc.playlist.enqueue({
+            {
+                path = child.path,
+                name = child.name,
+                duration = child.duration,
+                options = options
+            }
+        })
+
+        local options = {}
+
+        table.insert(options, "start-time=" .. 40)
+        table.insert(options, "stop-time=" .. 50)
 
         vlc.playlist.enqueue({
             {
@@ -172,9 +173,7 @@ function save_all_profiles()
     for _, profile in pairs(profiles) do
         io.write(profile.name)
         io.write("=")
-        io.write(profile.start_time)
-        io.write(",")
-        io.write(profile.finish_time)
+        io.write(profile.time_clips)
         io.write("\n")
     end
     io.close()
@@ -187,11 +186,10 @@ function load_all_profiles()
     local lines = lines_from(config_file)
 
     for _, line in pairs(lines) do
-        for name, start_time, finish_time in string.gmatch(line, "(.+)=(%d+),(%d+)") do
+        for name, time_clips in string.gmatch(line, "(.+)=(.+)") do
             table.insert(profiles, {
                 name = name,
-                start_time = start_time,
-                finish_time = finish_time
+                time_clips = time_clips
             })
         end
     end
