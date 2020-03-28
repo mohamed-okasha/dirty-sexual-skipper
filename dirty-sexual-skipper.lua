@@ -1,11 +1,11 @@
 --[[
--- Install script to ~/.local/share/vlc/lua/extensions/dirty-sexual-skipper.lua
--- Profiles saved to: ~/.config/vlc/dirty-sexual-skipper.conf
+-- Install script to ~/.local/share/vlc/lua/extensions/credit-skipper.lua
+-- Profiles saved to: ~/.config/vlc/credit-skipper.conf
 ]]
 
 function descriptor()
     return {
-        title = "Dirty Sexual Skipper",
+        title = "Dirty Sexual Skipper1",
         version = "1.0.0",
         author = "Mohamed Okasha",
         url = "https://github.com/mohamed-okasha/dirty-sexual-skipper.git",
@@ -40,7 +40,7 @@ end
 function open_dialog()
     dialog = vlc.dialog(descriptor().title)
 
-    dialog:add_label("<center><h3>Movie Profile</h3></center>", 1, 1, 2, 1)
+    dialog:add_label("<center><h3>Profile</h3></center>", 1, 1, 2, 1)
     dialog:add_button("Load", populate_profile_fields, 1, 3, 1, 1)
     dialog:add_button("Delete", delete_profile, 2, 3, 1, 1)
 
@@ -92,7 +92,7 @@ end
 
 function save_profile()
     if profile_name_input:get_text() == "" then return end
-    if time_clips_input.get_text() == "" then time_clips_input.set_text("0") end
+    if time_clips_input:get_text() == "" then time_clips_input:set_text("0") end
 
     local updated_existing = false
 
@@ -113,13 +113,11 @@ function save_profile()
     save_all_profiles()
 end
 
-
-
-local function trimString( s )
+function trimString( s )
     return string.match( s, "^()%s*$" ) and "" or string.match( s, "^%s*(.*%S)" )
 end
 
-local function split(s, delimiter)
+function split(s, delimiter)
     result = {};
     s= trimString(s);
     for match in (s..delimiter):gmatch("(.-)"..delimiter) do
@@ -146,22 +144,38 @@ function start_playlist()
     vlc.playlist.clear()
 
     local time_clips_list = time_clips_input:get_text()
-    -- proof of concept
-
+        -- proof of concept
+    
     for _, child in pairs(children) do
-        local options = {}
-
-        time_clips = split(time_clips_list, " +")
-
-
-        start_time = 0;
-        for clip in time_clips do
-            time_array = split(clip, ',')
-            stop_time = time_array[1];
-
-            table.insert(options, "start-time=" .. stop_time)
-            table.insert(options, "stop-time=" .. stop_time)
-
+            local options = {}
+    
+            time_clips = split(time_clips_list, " +")
+    
+    
+            start_time = 0;
+            for _,clip in pairs(time_clips) do
+                time_array = split(clip, ',')
+                stop_time = tonumber(time_array[1]);
+                
+    
+                table.insert(options, "start-time=" .. start_time)
+                table.insert(options, "stop-time=" .. stop_time)
+    
+                vlc.playlist.enqueue({
+                    {
+                        path = child.path,
+                        name = child.name,
+                        duration = child.duration,
+                        options = options
+                    }
+                })
+                options = {};
+                start_time = tonumber(time_array[2]);
+            end
+    
+            table.insert(options, "start-time=" .. start_time)
+            table.insert(options, "stop-time=" .. child.duration)
+    
             vlc.playlist.enqueue({
                 {
                     path = child.path,
@@ -170,20 +184,7 @@ function start_playlist()
                     options = options
                 }
             })
-            start_time = time_array[2];
-        end
 
-        table.insert(options, "start-time=" .. start_time)
-        table.insert(options, "stop-time=" .. child.duration)
-
-        vlc.playlist.enqueue({
-            {
-                path = child.path,
-                name = child.name,
-                duration = child.duration,
-                options = options
-            }
-        })
     end
 
     dialog:hide()
@@ -211,7 +212,7 @@ function load_all_profiles()
         for name, time_clips in string.gmatch(line, "(.+)=(.+)") do
             table.insert(profiles, {
                 name = name,
-                time_clips = time_clips
+                time_clips = time_clips,
             })
         end
     end
