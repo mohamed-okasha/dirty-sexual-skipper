@@ -92,7 +92,7 @@ end
 
 function save_profile()
     if profile_name_input:get_text() == "" then return end
-    if start_time_input.get_text() == "" then start_time_input.set_text("0") end
+    if time_clips_input.get_text() == "" then time_clips_input.set_text("0") end
 
     local updated_existing = false
 
@@ -113,6 +113,21 @@ function save_profile()
     save_all_profiles()
 end
 
+
+
+local function trimString( s )
+    return string.match( s, "^()%s*$" ) and "" or string.match( s, "^%s*(.*%S)" )
+end
+
+local function split(s, delimiter)
+    result = {};
+    s= trimString(s);
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
+
 function start_playlist()
     if time_clips_input:get_text() == "" then return end
 
@@ -130,29 +145,36 @@ function start_playlist()
 
     vlc.playlist.clear()
 
-    local time_clips = time_clips_input:get_text()
+    local time_clips_list = time_clips_input:get_text()
     -- proof of concept
 
     for _, child in pairs(children) do
         local options = {}
 
-        table.insert(options, "start-time=" .. 0)
-        table.insert(options, "stop-time=" .. 15)
+        time_clips = split(time_clips_list, " +")
 
 
-        vlc.playlist.enqueue({
-            {
-                path = child.path,
-                name = child.name,
-                duration = child.duration,
-                options = options
-            }
-        })
+        start_time = 0;
+        for clip in time_clips do
+            time_array = split(clip, ',')
+            stop_time = time_array[1];
 
-        local options = {}
+            table.insert(options, "start-time=" .. stop_time)
+            table.insert(options, "stop-time=" .. stop_time)
 
-        table.insert(options, "start-time=" .. 40)
-        table.insert(options, "stop-time=" .. 50)
+            vlc.playlist.enqueue({
+                {
+                    path = child.path,
+                    name = child.name,
+                    duration = child.duration,
+                    options = options
+                }
+            })
+            start_time = time_array[2];
+        end
+
+        table.insert(options, "start-time=" .. start_time)
+        table.insert(options, "stop-time=" .. child.duration)
 
         vlc.playlist.enqueue({
             {
