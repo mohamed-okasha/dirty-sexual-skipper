@@ -1,6 +1,6 @@
 <h1 align="center">vlc-dirty-sexual-skipper</h1>
 <p align="center">Automatically skip dirty/sexual content in VLC.</p>
-<p align="center"><a href="#readme"><img src="https://raw.githubusercontent.com/michaelbull/vlc-credit-skipper/master/preview.png" alt="Preview" /></a></p>
+<p align="center"><a href="#readme"><img src="https://github.com/mohamed-okasha/vlc_extenstion.dirty-sexual-skipper/blob/master/preview.png" alt="Preview" /></a></p>
 
 ## Installation
 
