@@ -1,11 +1,10 @@
---[[
--- Install script to ~/.local/share/vlc/lua/extensions/credit-skipper.lua
--- Profiles saved to: ~/.config/vlc/credit-skipper.conf
-]]
+
+
+
 
 function descriptor()
     return {
-        title = "Dirty Sexual Skipper1",
+        title = "Dirty Sexual Skipper",
         version = "1.0.0",
         author = "Mohamed Okasha",
         url = "https://github.com/mohamed-okasha/dirty-sexual-skipper.git",
@@ -51,13 +50,16 @@ function open_dialog()
     dialog:add_label("Profile name:", 1, 6, 1, 1)
     profile_name_input = dialog:add_text_input("", 2, 6, 1, 1)
 
+    
+
     dialog:add_label("time clips from,to .. (s):", 1, 7, 1, 1)
     time_clips_input = dialog:add_text_input("", 2, 7, 1, 1)
+    dialog:add_label("<center>Example: 00:00:01,00:02:00 01:00:00,01:12:00  </center>", 1, 8, 2, 1)
+
 
     dialog:add_button("Save", save_profile, 1, 9, 2, 1)
 
     dialog:add_label("", 1, 10, 2, 1)
-    dialog:add_label("<center><strong>Ensure your playlist is queued<br/>before pressing start.</strong></center>", 1, 11, 2, 1)
     dialog:add_button("Start Playlist", start_playlist, 1, 12, 2, 1)
 
     populate_profile_dropdown()
@@ -143,52 +145,65 @@ function start_playlist()
 
     vlc.playlist.clear()
 
-    local time_clips_list = time_clips_input:get_text()
+    local time_clips_list = time_clips_input:get_text();
         -- proof of concept
+
+    local START_TIME  = 1;
+    local END_TIME  = 2;
     
     for _, child in pairs(children) do
-            local options = {}
-    
+            
             time_clips = split(time_clips_list, " +")
-    
     
             start_time = 0;
             for _,clip in pairs(time_clips) do
-                time_array = split(clip, ',')
-                stop_time = tonumber(time_array[1]);
+                start_stop_array = split(clip, ',')
+                stop_time = start_stop_array[START_TIME];
+
+                enqueue_in_playlist(child.path, child.name, child.duration, start_time, stop_time);
                 
-    
-                table.insert(options, "start-time=" .. start_time)
-                table.insert(options, "stop-time=" .. stop_time)
-    
-                vlc.playlist.enqueue({
-                    {
-                        path = child.path,
-                        name = child.name,
-                        duration = child.duration,
-                        options = options
-                    }
-                })
-                options = {};
-                start_time = tonumber(time_array[2]);
+                start_time = start_stop_array[END_TIME];
             end
     
-            table.insert(options, "start-time=" .. start_time)
-            table.insert(options, "stop-time=" .. child.duration)
-    
-            vlc.playlist.enqueue({
-                {
-                    path = child.path,
-                    name = child.name,
-                    duration = child.duration,
-                    options = options
-                }
-            })
+            enqueue_in_playlist(child.path, child.name, child.duration, start_time, child.duration);
 
     end
 
     dialog:hide()
     vlc.playlist.play()
+end
+
+function enqueue_in_playlist(path, name, duration, from, to)
+
+    local options = {};
+    
+    from = split(from, ":");
+    to = split(to, ":");
+
+    if (table.getn(from) > 1) then
+        from_seconds = tonumber(from[1])*60*60 + tonumber(from[2])*60 + tonumber(from[3]);
+    else
+        from_seconds = tonumber(from[1]);
+    end
+
+    if (table.getn(to) > 1) then
+        to_seconds = tonumber(to[1])*60*60 + tonumber(to[2])*60 + tonumber(to[3]);
+    else
+        to_seconds = tonumber(to[1]);
+    end
+    
+    table.insert(options, "start-time=" .. from_seconds);
+    table.insert(options, "stop-time=" .. to_seconds);
+
+    vlc.playlist.enqueue({
+        {
+            path = path,
+            name = name,
+            duration = duration,
+            options = options
+        }
+    })
+
 end
 
 function save_all_profiles()
